@@ -73,11 +73,11 @@ try {
             $mail->Body = "
                 <html>
                 <body>
-                    <h2>Interview Notice - Skill Builder Academy</h2>
+                    <h2>Interview Notice - Federal Medical Center</h2>
                     <p>Dear {$recipient['name']},</p>
-                    <p>Thank you for your application to the Skill Builder Academy internship program. 
+                    <p>Thank you for your application to the Federal Medical Center internship program. 
                     Please find attached your interview notice with important details about your upcoming interview.</p>
-                    <p>Best regards,<br>Skill Builder Academy Team</p>
+                    <p>Best regards,<br>FMC BKD ICT Team</p>
                 </body>
                 </html>";
             
