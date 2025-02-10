@@ -105,18 +105,19 @@
         url: 'admn.php',
         type: 'GET',
         data: { uid: id },
-        success: function (response) {
-          var data = JSON.parse(response);
+        dataType: 'json',
+        success: function (data) {
           if (data.status === 'success') {
-            // Show success flash message
             $('#flash-message').fadeIn();
-
-            // Remove applicant from the table after confirmation
             $('#applicant-' + id).fadeOut();
-
-            // Update the button to "Cancel"
-            $('[data-id="' + id + '"]').replaceWith('<button class="btn btn-danger cancel-btn" data-id="' + id + '">Cancel</button>');
+            $('[data-id="' + id + '"]').replaceWith(
+              '<button class="btn btn-danger cancel-btn" data-id="' + id + '">Cancel</button>'
+            );
           }
+        },
+        error: function(xhr, status, error) {
+          console.error('Selection Error:', xhr.responseText);
+          alert('Error: ' + (xhr.responseJSON?.message || 'Operation failed'));
         }
       });
     });
@@ -128,64 +129,80 @@
         url: 'admn.php',
         type: 'GET',
         data: { id: id },
-        success: function (response) {
-          var data = JSON.parse(response);
+        dataType: 'json',
+        success: function (data) {
           if (data.status === 'success') {
-            // Show success flash message
             $('#flash-message').fadeIn();
-
-            // Remove applicant from the table after confirmation
             $('#applicant-' + id).fadeOut();
-
-            // Update the button to "Select"
-            $('[data-id="' + id + '"]').replaceWith('<button class="btn btn-success select-btn" data-id="' + id + '">Select</button>');
+            $('[data-id="' + id + '"]').replaceWith(
+              '<button class="btn btn-success select-btn" data-id="' + id + '">Select</button>'
+            );
           }
+        },
+        error: function(xhr) {
+          console.error('Cancellation Error:', xhr.responseText);
+          alert('Error: ' + (xhr.responseJSON?.message || 'Operation failed'));
         }
       });
     });
 
-    // Send All Documents Button functionality
-   // In your existing applist.php script
-   $('#send-all-documents-btn').on('click', function () {
-    if (!confirm('Are you sure you want to send the interview notice to all eligible applicants?')) {
-        return;
-    }
+    // Send All Documents Button
+    $('#send-all-documents-btn').on('click', function () {
+    if (!confirm('Send interview notice to ALL 214 eligible applicants?')) return;
     
-    var button = $(this);
-    button.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Sending...');
+    const button = $(this);
+    button.prop('disabled', true).html(`
+        <i class="bi bi-hourglass-split"></i> 
+        Sending (0/${totalRecipients})
+    `);
 
+    // Get total recipients first
     $.ajax({
-        url: 'sendDocumentToAll.php',
+        url: 'sendDocumentToAll.php?action=count',
         type: 'GET',
-        dataType: 'json',
-        success: function(response) {
-            if (response.status === 'success') {
-                alert(response.message);
-                console.log('Detailed results:', response.results);
-            } else {
-                alert('Error: ' + (response.message || 'Unknown error occurred'));
-                console.error('Error details:', response);
+        success: function(countResponse) {
+            const total = countResponse.total;
+            let processed = 0;
+            
+            function sendBatch() {
+                $.ajax({
+                    url: 'sendDocumentToAll.php',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        processed = response.results.processed;
+                        button.html(`
+                            <i class="bi bi-hourglass-split"></i> 
+                            Sending (${processed}/${total})
+                        `);
+
+                        if (processed < total) {
+                            sendBatch();
+                        } else {
+                            button.prop('disabled', false)
+                                  .html('<i class="bi bi-envelope"></i> Send All Documents');
+                            alert(`Sent ${response.results.success}/${total} emails`);
+                        }
+                    },
+                    error: function(xhr) {
+                        button.prop('disabled', false)
+                              .html('<i class="bi bi-envelope"></i> Send All Documents');
+                        alert('Error: ' + xhr.responseJSON?.message || 'Failed to complete');
+                    }
+                });
             }
+            
+            sendBatch();
         },
-        error: function(xhr, status, error) {
-            console.error('AJAX Error:', {xhr: xhr, status: status, error: error});
-            let errorMsg = 'Request failed: ';
-            try {
-                const res = JSON.parse(xhr.responseText);
-                errorMsg += res.message || error;
-            } catch (e) {
-                errorMsg += error;
-            }
-            alert(errorMsg);
-        },
-        complete: function() {
-            button.prop('disabled', false).html('<i class="bi bi-envelope"></i> Send All Documents');
+        error: function() {
+            button.prop('disabled', false)
+                  .html('<i class="bi bi-envelope"></i> Send All Documents');
+            alert('Failed to start sending');
         }
     });
 });
+
     // Hide flash message after 3 seconds
-    setTimeout(function() {
-      $('#flash-message').fadeOut();
-    }, 3000);
+    setTimeout(() => $('#flash-message').fadeOut(), 3000);
   });
 </script>
